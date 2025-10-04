@@ -13,19 +13,15 @@ import os
 try:
     # Construct the path to the uploaded file. Vercel bundles files 
     # based on the vercel.json configuration.
-    file_path = os.path.join(os.getcwd(), 'q-vercel-latency.json')  # <-- safer
-    
+    file_path = os.path.join(os.path.dirname(__file__), 'q-vercel-latency.json')
     with open(file_path, 'r') as f:
         data = json.load(f)
     df = pd.DataFrame(data)
-    
-    # Ensure latency is numeric and handle case for breaches calculation
     df['latency_ms'] = pd.to_numeric(df['latency_ms'], errors='coerce')
     df.dropna(subset=['latency_ms'], inplace=True)
-    
-except FileNotFoundError:
-    # Fallback/Error state for the data frame
+except Exception as e:
     df = pd.DataFrame(columns=['region', 'latency_ms', 'uptime_pct'])
+    print("Error loading JSON:", e)
 
 # --- FastAPI Setup ---
 app = FastAPI()
