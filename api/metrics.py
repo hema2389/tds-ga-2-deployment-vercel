@@ -1,30 +1,42 @@
 import pandas as pd
 import numpy as np
+import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 # --- Data Loading ---
+# In a real Vercel deployment, you would typically read the data from 
+# a database or cloud storage. For this exercise, we load the provided JSON 
+# file, assuming it's placed in the root of the deployment bundle.
 try:
-    # Load the telemetry data using pandas
-    df = pd.read_csv("telemetry.csv")
+    # Construct the path to the uploaded file. Vercel bundles files 
+    # based on the vercel.json configuration.
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'q-vercel-latency.json')
+    
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
+    
+    # Ensure latency is numeric and handle case for breaches calculation
     df['latency_ms'] = pd.to_numeric(df['latency_ms'], errors='coerce')
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
     df.dropna(subset=['latency_ms'], inplace=True)
+    
 except FileNotFoundError:
-    # Handle case where file is missing (e.g., in serverless environment)
-    df = pd.DataFrame(columns=['region', 'latency_ms', 'status'])
+    # Fallback/Error state for the data frame
+    df = pd.DataFrame(columns=['region', 'latency_ms', 'uptime_pct'])
 
 # --- FastAPI Setup ---
-app = FastAPI(title="eShopCo Latency API")
+app = FastAPI()
 
 # Enable CORS for POST requests from any origin
-origins = ["*"]
+# The requirement is to allow POST from any origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["POST"],
+    allow_methods=["POST"], # Allows only POST
     allow_headers=["*"],
 )
 
@@ -34,44 +46,31 @@ class MetricsRequest(BaseModel):
     threshold_ms: int
 
 # --- API Endpoint ---
-@app.post("/api/metrics")
+# The route path should match the Vercel routing configuration.
+@app.post("/metrics")
 async def get_metrics(request_data: MetricsRequest):
-    """
-    Returns per-region latency and uptime metrics based on a given threshold.
-    """
     if df.empty:
-        # Placeholder for real-world deployment where data might be fetched from DB
-        raise HTTPException(status_code=500, detail="Telemetry data not loaded.")
+        raise HTTPException(status_code=500, detail="Telemetry data could not be loaded or is empty.")
 
     results = {}
     
     for region in request_data.regions:
-        region_df = df[df['region'] == region.lower()]
+        region_df = df[df['region'].str.lower() == region.lower()]
         
         if region_df.empty:
-            results[region] = {
-                "avg_latency": 0.0,
-                "p95_latency": 0.0,
-                "avg_uptime": 0.0,
-                "breaches": 0,
-                "error": "No data for this region"
-            }
             continue
 
-        # Calculate Latency Metrics
+        # 1. avg_latency (mean)
         avg_latency = region_df['latency_ms'].mean()
+        
+        # 2. p95_latency (95th percentile)
         p95_latency = np.percentile(region_df['latency_ms'], 95)
         
-        # Calculate Uptime/Breaches
-        total_records = len(region_df)
-        breach_records = region_df[region_df['latency_ms'] > request_data.threshold_ms]
-        breaches_count = len(breach_records)
+        # 3. avg_uptime (mean) - using the provided 'uptime_pct' column
+        avg_uptime = region_df['uptime_pct'].mean()
         
-        # Uptime is defined as the percentage of records *not* failing 
-        # the latency check. Assuming 'status' is not the source of truth,
-        # but the latency threshold is.
-        up_records = total_records - breaches_count
-        avg_uptime = (up_records / total_records) * 100 if total_records > 0 else 0.0
+        # 4. breaches (count of records above threshold)
+        breaches_count = len(region_df[region_df['latency_ms'] > request_data.threshold_ms])
         
         results[region] = {
             "avg_latency": round(avg_latency, 2),
@@ -81,9 +80,3 @@ async def get_metrics(request_data: MetricsRequest):
         }
     
     return results
-
-# Required for Vercel's Python runtime to find the ASGI app instance
-# if the file is named index.py or app.py. Naming the file api/metrics.py
-# might require Vercel config, or you ensure the Vercel function path 
-# matches the file path (e.g., /api/metrics).
-# For Vercel, the main app instance should be named 'app'.
