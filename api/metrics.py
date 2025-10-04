@@ -38,7 +38,7 @@ class MetricsRequest(BaseModel):
     threshold_ms: int
 
 # --- API Endpoint ---
-@app.post("/metrics")
+@app.post("/")
 async def get_metrics(request_data: MetricsRequest):
     if df.empty:
         # Return empty results instead of 500
