@@ -7,24 +7,24 @@ from pathlib import Path
 
 app = FastAPI()
 
-# Enable CORS for POST requests from any origin
+# ✅ Enable CORS for all origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST"],
-    allow_headers=["*"],
+    allow_origins=["*"],       # allow requests from any origin
+    allow_methods=["POST"],    # allow POST requests
+    allow_headers=["*"],       # allow any headers
 )
 
 class TelemetryRequest(BaseModel):
     regions: list[str]
     threshold_ms: int
 
-# Load telemetry data from JSON file
+# Load telemetry data
 json_path = Path(__file__).parent / "q-vercel-json.json"
 with open(json_path) as f:
     telemetry_raw = json.load(f)
 
-# Organize data per region
+# Organize by region
 telemetry_data = {}
 for record in telemetry_raw:
     region = record["region"]
