@@ -16,6 +16,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],    # allow GET, POST, OPTIONS
     allow_headers=["*"],    # allow all headers
+    expose_headers=["*"]
 )
 
 # --- Data Loading ---
