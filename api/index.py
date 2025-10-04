@@ -5,11 +5,12 @@ import numpy as np
 
 app = FastAPI()
 
+# Enable CORS for all origins (necessary for dashboards or browser requests)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST"],
-    allow_headers=["*"],
+    allow_origins=["*"],       # allow requests from any origin
+    allow_methods=["POST"],    # allow POST requests
+    allow_headers=["*"]        # allow any headers
 )
 
 class TelemetryRequest(BaseModel):
