@@ -1,4 +1,6 @@
 fastapi
-numpy
 uvicorn
 pandas
+numpy
+pydantic
+python-multipart  # Common dependency for FastAPI/Uvicorn
