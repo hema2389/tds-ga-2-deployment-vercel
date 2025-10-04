@@ -34,7 +34,7 @@ app = FastAPI()
 # The requirement is to allow POST from any origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    access_control_allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
     allow_methods=["POST"], # Allows only POST
     allow_headers=["*"],
