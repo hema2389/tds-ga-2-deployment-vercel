@@ -3,13 +3,23 @@
   "builds": [
     {
       "src": "api/metrics.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "25mb"
+      }
+    },
+    {
+      "src": "q-vercel-latency.json",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/metrics",
-      "dest": "api/metrics.py"
+      "src": "/metrics",
+      "dest": "/api/metrics.py"
     }
-  ]
+  ],
+  "github": {
+    "silent": true
+  }
 }
