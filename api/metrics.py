@@ -13,7 +13,7 @@ import os
 try:
     # Construct the path to the uploaded file. Vercel bundles files 
     # based on the vercel.json configuration.
-    file_path = os.path.join(os.path.dirname(__file__), '..', 'q-vercel-latency.json')
+    file_path = os.path.join(os.getcwd(), 'q-vercel-latency.json')  # <-- safer
     
     with open(file_path, 'r') as f:
         data = json.load(f)
@@ -34,9 +34,9 @@ app = FastAPI()
 # The requirement is to allow POST from any origin.
 app.add_middleware(
     CORSMiddleware,
-    access_control_allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],  
     allow_credentials=True,
-    allow_methods=["POST"], # Allows only POST
+    allow_methods=["*"],  # <-- allow all methods
     allow_headers=["*"],
 )
 
