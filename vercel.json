@@ -15,8 +15,8 @@
   ],
   "routes": [
     {
-      "src": "/metrics",      
-      "dest": "/api/metrics.py" 
+      "src": "/metrics",
+      "dest": "/api/metrics.py"
     }
   ],
   "github": {
