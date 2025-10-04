@@ -15,8 +15,8 @@
   ],
   "routes": [
     {
-      "src": "/metrics",
-      "dest": "/api/metrics.py"
+      "src": "/metrics",      // The URL path the client calls
+      "dest": "/api/metrics.py" // The path to your Python function file
     }
   ],
   "github": {
