@@ -2,35 +2,46 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
+import json
+from pathlib import Path
 
 app = FastAPI()
 
-# Enable CORS for all origins (necessary for dashboards or browser requests)
+# Enable CORS for POST requests from any origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # allow requests from any origin
-    allow_methods=["POST"],    # allow POST requests
-    allow_headers=["*"]        # allow any headers
+    allow_origins=["*"],
+    allow_methods=["POST"],
+    allow_headers=["*"],
 )
 
 class TelemetryRequest(BaseModel):
     regions: list[str]
     threshold_ms: int
 
-# Example telemetry data
-telemetry_data = {
-    "apac": {"latencies": [170, 180, 200], "uptime": [1, 1, 0]},
-    "emea": {"latencies": [160, 175, 190], "uptime": [1, 1, 1]},
-}
+# Load telemetry data from JSON file
+json_path = Path(__file__).parent / "q-vercel-json.json"
+with open(json_path) as f:
+    telemetry_raw = json.load(f)
+
+# Organize data per region
+telemetry_data = {}
+for record in telemetry_raw:
+    region = record["region"]
+    if region not in telemetry_data:
+        telemetry_data[region] = {"latencies": [], "uptimes": []}
+    telemetry_data[region]["latencies"].append(record["latency_ms"])
+    telemetry_data[region]["uptimes"].append(record["uptime_pct"])
 
 @app.post("/")
 async def check_latency(req: TelemetryRequest):
     response = {}
     for region in req.regions:
-        region_data = telemetry_data.get(region, {"latencies": [], "uptime": []})
+        region_data = telemetry_data.get(region, {"latencies": [], "uptimes": []})
         latencies = np.array(region_data["latencies"])
-        uptimes = np.array(region_data["uptime"])
+        uptimes = np.array(region_data["uptimes"])
         threshold = req.threshold_ms
+
         response[region] = {
             "avg_latency": float(latencies.mean()) if len(latencies) else None,
             "p95_latency": float(np.percentile(latencies, 95)) if len(latencies) else None,
